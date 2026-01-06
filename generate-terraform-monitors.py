@@ -12,11 +12,11 @@ import urllib.request
 import urllib.error
 import time
 import re
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 
 # Configuration
-API_KEY = os.getenv("GROUNDCOVER_API_KEY", "api-key-here")
-BACKEND_ID = os.getenv("GROUNDCOVER_BACKEND_ID", "backend-id-here")
+API_KEY = os.getenv("GROUNDCOVER_API_KEY", "your-api-key-here")
+BACKEND_ID = os.getenv("GROUNDCOVER_BACKEND_ID", "your-backend-id-here")
 BASE_URL = os.getenv("GROUNDCOVER_BASE_URL", "https://app.groundcover.com")
 
 def make_request(url: str, method: str = "GET", data: Optional[bytes] = None) -> Optional[Dict]:
@@ -39,36 +39,30 @@ def make_request(url: str, method: str = "GET", data: Optional[bytes] = None) ->
     except Exception:
         return None
 
-def fetch_monitors() -> Optional[List[Dict]]:
-    """Fetch monitors from Groundcover API."""
-    endpoints_to_try = [
-        (f"{BASE_URL}/api/monitors/summary/query", "POST", {}),
-        (f"{BASE_URL}/api/monitors", "GET", None),
-        (f"{BASE_URL}/api/monitors/query", "POST", {}),
-        (f"{BASE_URL}/api/monitors/summary", "GET", None),
-        (f"{BASE_URL}/api/monitors/summary", "POST", {}),
-    ]
+def fetch_monitors() -> Tuple[Optional[List[Dict]], Optional[str]]:
+    """Fetch monitors from Groundcover API.
     
-    for endpoint, method, data in endpoints_to_try:
-        post_data = None
-        if data is not None:
-            post_data = json.dumps(data).encode('utf-8')
-        
-        monitors = make_request(endpoint, method=method, data=post_data)
-        if monitors is not None:
-            break
+    Returns:
+        Tuple of (monitors_list, successful_endpoint) or (None, None) if failed.
+    """
+    endpoint = f"{BASE_URL}/api/monitors/summary/query"
+    method = "POST"
+    post_data = json.dumps({}).encode('utf-8')
+    
+    monitors = make_request(endpoint, method=method, data=post_data)
+    successful_endpoint = f"{method} {endpoint}"
     
     if monitors is None:
-        return None
+        return None, None
     
     if isinstance(monitors, list):
-        return monitors
+        return monitors, successful_endpoint
     elif isinstance(monitors, dict):
         for key in ['results', 'data', 'monitors', 'items']:
             if key in monitors:
-                return monitors[key]
-        return [monitors]
-    return None
+                return monitors[key], successful_endpoint
+        return [monitors], successful_endpoint
+    return None, None
 
 def sanitize_resource_name(name: str) -> str:
     """Convert monitor name to valid Terraform resource name."""
@@ -239,7 +233,7 @@ def main():
     print("🚀 Fetching monitors from Groundcover API...")
     print(f"Using Backend ID: {BACKEND_ID}\n")
     
-    monitors = fetch_monitors()
+    monitors, successful_endpoint = fetch_monitors()
     
     if monitors is None or len(monitors) == 0:
         print("❌ Error: Failed to fetch monitors from API")
@@ -251,6 +245,8 @@ def main():
         exit(1)
     
     print(f"✅ Found {len(monitors)} monitor(s)")
+    if successful_endpoint:
+        print(f"📡 Successfully fetched from: {successful_endpoint}")
     print(f"🔄 Converting to Terraform format...\n")
     
     # Generate Terraform resources

@@ -72,7 +72,7 @@ terraform apply
 
 ## How It Works
 
-1. **API Connection**: The script attempts multiple API endpoints to fetch monitors from Groundcover
+1. **API Connection**: The script makes a POST request to `/api/monitors/summary/query` to fetch monitors from Groundcover
 2. **Data Transformation**: Converts monitor JSON data into YAML format required by the Terraform provider
 3. **Resource Generation**: Creates Terraform resource blocks with sanitized resource names
 4. **File Output**: Writes all resources to `terraform.tf` with provider configuration included
@@ -92,7 +92,7 @@ If the script fails to fetch monitors:
 1. Verify your API credentials are correct
 2. Check network connectivity to your Groundcover instance
 3. Ensure the Backend ID is correct
-4. Verify the API endpoint is accessible
+4. Verify the API endpoint (`/api/monitors/summary/query`) is accessible
 5. Check that you have proper permissions to read monitors
 
 ## License
