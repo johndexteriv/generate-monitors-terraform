@@ -45,17 +45,21 @@ chmod +x generate-terraform-monitors.py
 
 ### 3. Output
 
-The script generates a `terraform.tf` file containing:
+The script generates a `monitors_terraform` directory containing:
 
-- Terraform provider configuration for Groundcover
-- Variable definitions for API credentials
-- Resource blocks for each monitor found in your Groundcover instance
+- `terraform.tf` - Terraform provider configuration and variable definitions
+- `monitor_{resource_name}.tf` - Individual Terraform resource files for each monitor
+
+Each monitor gets its own file, making it easier to manage and version control individual monitor configurations.
 
 ### 4. Use the Generated Terraform
 
-After generating the Terraform file, you can use it to manage your monitors:
+After generating the Terraform files, navigate to the output directory and use Terraform to manage your monitors:
 
 ```bash
+# Navigate to the generated directory
+cd monitors_terraform
+
 # Set Terraform variables (or use terraform.tfvars)
 export TF_VAR_groundcover_api_key="your-api-key-here"
 export TF_VAR_groundcover_backend_id="your-backend-id-here"
@@ -75,13 +79,18 @@ terraform apply
 1. **API Connection**: The script makes a POST request to `/api/monitors/summary/query` to fetch monitors from Groundcover
 2. **Data Transformation**: Converts monitor JSON data into YAML format required by the Terraform provider
 3. **Resource Generation**: Creates Terraform resource blocks with sanitized resource names
-4. **File Output**: Writes all resources to `terraform.tf` with provider configuration included
+4. **File Output**: 
+   - Creates a `monitors_terraform` directory
+   - Writes provider configuration to `terraform.tf`
+   - Creates individual `monitor_{resource_name}.tf` files for each monitor
 
 ## Features
 
 - Automatically handles duplicate monitor names by appending counters
 - Sanitizes monitor names to valid Terraform resource identifiers
 - Converts monitor configurations to the correct YAML format
+- Creates individual files for each monitor resource for easier management
+- Organizes all Terraform files in a dedicated `monitors_terraform` directory
 - Includes complete Terraform provider setup in the output
 - Provides helpful error messages if API connection fails
 

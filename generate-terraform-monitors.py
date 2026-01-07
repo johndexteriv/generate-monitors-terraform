@@ -251,7 +251,8 @@ def main():
     
     # Generate Terraform resources
     terraform_resources = []
-    resource_names = set()
+    resource_names = []
+    resource_names_set = set()
     
     for i, monitor in enumerate(monitors, 1):
         title = monitor.get('title', 'unnamed')
@@ -260,21 +261,27 @@ def main():
         # Handle duplicates
         original_name = resource_name
         counter = 1
-        while resource_name in resource_names:
+        while resource_name in resource_names_set:
             resource_name = f"{original_name}_{counter}"
             counter += 1
         
-        resource_names.add(resource_name)
+        resource_names_set.add(resource_name)
+        resource_names.append(resource_name)
         terraform = generate_terraform_resource(monitor, resource_name)
         terraform_resources.append(terraform)
         
         print(f"  [{i}/{len(monitors)}] {title} -> {resource_name}")
     
-    # Write to terraform.tf
-    output_file = "terraform.tf"
-    print(f"\n💾 Writing to {output_file}...")
+    # Create output directory
+    output_dir = "monitors_terraform"
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"\n📁 Created output directory: {output_dir}")
     
-    with open(output_file, 'w') as f:
+    # Write provider configuration to terraform.tf
+    provider_file = os.path.join(output_dir, "terraform.tf")
+    print(f"\n💾 Writing provider configuration to {provider_file}...")
+    
+    with open(provider_file, 'w') as f:
         # Write Terraform configuration header
         f.write('''terraform {
   required_providers {
@@ -302,15 +309,29 @@ variable "groundcover_backend_id" {
 }
 
 ''')
-        
-        # Write all monitor resources
-        for terraform in terraform_resources:
-            f.write(terraform)
-            f.write("\n")
     
-    print(f"✅ Successfully generated {len(terraform_resources)} Terraform resources")
-    print(f"📄 Saved to: {output_file}")
-    print(f"\n💡 To use this file:")
+    print(f"✅ Provider configuration saved to: {provider_file}")
+    
+    # Write individual files for each monitor resource
+    print(f"\n💾 Writing individual resource files...")
+    created_files = []
+    
+    for i, (terraform, resource_name) in enumerate(zip(terraform_resources, resource_names), 1):
+        output_file = os.path.join(output_dir, f"monitor_{resource_name}.tf")
+        created_files.append(output_file)
+        
+        with open(output_file, 'w') as f:
+            f.write(terraform)
+        
+        print(f"  [{i}/{len(terraform_resources)}] {resource_name} -> {output_file}")
+    
+    print(f"\n✅ Successfully generated {len(terraform_resources)} Terraform resource files")
+    print(f"📄 Created files in {output_dir}/:")
+    print(f"   - terraform.tf (provider configuration)")
+    for filename in created_files:
+        print(f"   - {os.path.basename(filename)}")
+    print(f"\n💡 To use these files:")
+    print(f"   cd {output_dir}")
     print(f"   export TF_VAR_groundcover_api_key='{API_KEY}'")
     print(f"   export TF_VAR_groundcover_backend_id='{BACKEND_ID}'")
     print(f"   terraform init")
